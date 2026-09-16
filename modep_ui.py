@@ -16,6 +16,7 @@ except IOError:
     font_title = font_body = font_stats = ImageFont.load_default()
 
 while True:
+    print("Starting loop")
     pb_name = "Connecting to MODEP..."
     raw_output = ""
     
@@ -71,7 +72,12 @@ while True:
     try:
         raw_bytes = img.convert(COLOR_MODE).tobytes()
         with open('/dev/fb0', 'wb') as f:
-            f.write(raw_bytes)
+            bytes_written = f.write(raw_bytes)
+        print("wrote bytes to screen")
+        if bytes_written == len(raw_bytes):
+            print(f"Success! Successfully wrote all {bytes_written} bytes.")
+        else:
+           print(f"Warning: Data mismatch. Wrote {bytes_written} out of {len(raw_bytes)} bytes.")
     except IOError as e:
         print(f"Framebuffer write block: {e}")
 

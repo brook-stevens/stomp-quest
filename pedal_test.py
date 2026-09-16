@@ -10,7 +10,8 @@ from gpiozero import Button
 # 24 does NOT
 # 5 Works
 # 6 Works
-footswitch = Button(5, pull_up=True)
+# 13,15 does NOT
+footswitch = Button(3, pull_up=True)
 
 def switch_pressed():
     print("🎸 Footswitch PRESSED! (Signal went LOW / Grounded)")

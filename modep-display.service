@@ -1,0 +1,20 @@
+[Unit]
+Description=MODEP 2.8 Inch TFT Custom Python Display (Non-Root)
+After=modep-mod-ui.service
+Wants=modep-mod-ui.service
+
+[Service]
+Type=simple
+User=patch
+Group=patch
+WorkingDirectory=/home/patch/modep_ui
+ExecStart=/usr/bin/python3 /home/patch/modep_ui/modep_ui.py
+Restart=always
+RestartSec=3
+StandardOutput=tty
+StandardInput=tty
+TTYPath=/dev/tty1
+
+[Install]
+WantedBy=multi-user.target
+

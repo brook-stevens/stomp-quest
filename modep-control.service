@@ -1,0 +1,17 @@
+[Unit]
+Description=MODEP 2.8 stomp control
+After=modep-mod-ui.service
+Wants=modep-mod-ui.service
+
+[Service]
+Type=simple
+User=patch
+Group=patch
+WorkingDirectory=/home/patch/modep_ui
+ExecStart=/home/patch/.local/bin/uv run main.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+
