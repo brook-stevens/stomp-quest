@@ -11,3 +11,12 @@ dependencies = [
     "python-rtmidi>=1.5.8",
     "requests>=2.34.2",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
