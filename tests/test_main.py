@@ -1,0 +1,63 @@
+import main
+
+
+class FakePort:
+    def __init__(self):
+        self.messages = []
+
+    def send(self, message):
+        self.messages.append(message)
+
+
+class FakeButton:
+    instances = []
+
+    def __init__(self, pin, **kwargs):
+        self.pin = pin
+        self.kwargs = kwargs
+        self.when_pressed = None
+        self.when_released = None
+        self.instances.append(self)
+
+
+def test_find_target_input_matches_case_insensitively():
+    assert main.find_target_input(["MIDI Keyboard", "PiSound MIDI"]) == "PiSound MIDI"
+    assert main.find_target_input(["MIDI Keyboard"]) is None
+
+
+def test_cc_press_toggles_and_sends_to_both_ports():
+    primary = FakePort()
+    routed = FakePort()
+    states = {20: False}
+
+    main.handle_cc_press(6, 20, "Effect Toggle 1", primary, routed, states)
+    main.handle_cc_press(6, 20, "Effect Toggle 1", primary, routed, states)
+
+    assert [message.value for message in primary.messages] == [127, 0]
+    assert [message.control for message in routed.messages] == [20, 20]
+    assert states[20] is False
+
+
+def test_command_press_starts_bash_script():
+    calls = []
+
+    main.handle_cmd_press(23, "/tmp/next.sh", "Next Pedalboard", calls.append)
+
+    assert calls == [["/bin/bash", "/tmp/next.sh"]]
+
+
+def test_register_buttons_binds_each_pin_configuration(monkeypatch):
+    FakeButton.instances.clear()
+    configs = {
+        6: {"name": "Effect", "type": "cc", "val": 20},
+        23: {"name": "Next", "type": "cmd", "val": "/tmp/next.sh"},
+    }
+    buttons = main.register_buttons(FakePort(), None, FakeButton, configs)
+
+    assert [button.pin for button in buttons] == [6, 23]
+    assert buttons[0].when_pressed(None) is None
+
+    calls = []
+    monkeypatch.setattr(main, "handle_cmd_press", lambda *args: calls.append(args))
+    buttons[1].when_pressed(None)
+    assert calls == [(23, "/tmp/next.sh", "Next")]

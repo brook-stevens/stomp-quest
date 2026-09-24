@@ -8,6 +8,7 @@ wheels/
 *.swp
 *.px~
 *.pz~
+*.py~
 
 # Virtual environments
 .venv
