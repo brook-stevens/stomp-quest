@@ -2,12 +2,12 @@
 
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-    printf 'Usage: %s <remote-pedal-hostname>\n' "$0" >&2
+if [[ $# -gt 1 ]]; then
+    printf 'Usage: %s [remote-pedal-hostname]\n' "$0" >&2
     exit 1
 fi
 
-remote_host=$1
+remote_host=${1:-patchbox}
 remote_target="patch@${remote_host}"
 remote_dir="/home/patch/modep_ui"
 

@@ -27,6 +27,23 @@ def test_find_target_input_matches_case_insensitively():
     assert main.find_target_input(["MIDI Keyboard"]) is None
 
 
+def test_open_midi_outputs_retries_until_modep_input_is_available():
+    primary = FakePort()
+    routed = FakePort()
+    input_names = iter([[], ["MODEP MIDI"]])
+    sleeps = []
+
+    midi_out, midi_connect = main.open_midi_outputs(
+        open_output=lambda name, virtual=False: primary if virtual else routed,
+        get_input_names=lambda: next(input_names),
+        sleep=sleeps.append,
+    )
+
+    assert midi_out is primary
+    assert midi_connect is routed
+    assert sleeps == [main.MIDI_TARGET_RETRY_DELAY]
+
+
 def test_cc_press_toggles_and_sends_to_both_ports(monkeypatch):
     primary = FakePort()
     routed = FakePort()

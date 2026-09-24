@@ -13,6 +13,8 @@ PORT_NAME = "GuitarPedalPort"
 TARGET_KEYWORDS = ("modep", "mod-host", "pisound")
 CC_CHANNEL = 0
 FEEDBACK_FILE = "/var/modep/button_feedback.json"
+MIDI_TARGET_RETRIES = 10
+MIDI_TARGET_RETRY_DELAY = 1.0
 
 
 switches_config = {
@@ -47,13 +49,25 @@ def find_target_input(input_names, keywords=TARGET_KEYWORDS):
     )
 
 
-def open_midi_outputs(open_output=mido.open_output, get_input_names=mido.get_input_names):
+def open_midi_outputs(
+    open_output=mido.open_output,
+    get_input_names=mido.get_input_names,
+    sleep=time.sleep,
+):
     """Open the virtual output and an optional direct MODEP output."""
     midi_out = open_output(PORT_NAME, virtual=True)
     print(f"Virtual Port '{PORT_NAME}' initialized.")
 
     midi_connect = None
-    target_input = find_target_input(get_input_names())
+    target_input = None
+    for attempt in range(MIDI_TARGET_RETRIES):
+        target_input = find_target_input(get_input_names())
+        if target_input:
+            break
+        if attempt < MIDI_TARGET_RETRIES - 1:
+            print("MODEP MIDI input is not ready; retrying...")
+            sleep(MIDI_TARGET_RETRY_DELAY)
+
     if target_input:
         try:
             midi_connect = open_output(target_input)
