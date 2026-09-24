@@ -10,6 +10,9 @@ class FakePort:
     def send(self, message):
         self.messages.append(message)
 
+    def close(self):
+        pass
+
 
 class FakeButton:
     instances = []
@@ -33,15 +36,18 @@ def test_open_midi_outputs_retries_until_modep_input_is_available():
     input_names = iter([[], ["MODEP MIDI"]])
     sleeps = []
 
-    midi_out, midi_connect = main.open_midi_outputs(
+    midi_out, midi_connect, midi_monitor = main.open_midi_outputs(
         open_output=lambda name, virtual=False: primary if virtual else routed,
+        open_input=lambda name: FakePort(),
         get_input_names=lambda: next(input_names),
         sleep=sleeps.append,
     )
 
     assert midi_out is primary
     assert midi_connect is routed
+    assert midi_monitor is not None
     assert sleeps == [main.MIDI_TARGET_RETRY_DELAY]
+    midi_monitor.close()
 
 
 def test_cc_press_toggles_and_sends_to_both_ports(monkeypatch):
@@ -61,6 +67,32 @@ def test_cc_press_toggles_and_sends_to_both_ports(monkeypatch):
         "Effect Toggle 1: MIDI Ch 1 | CC 20 | 127 (ON)",
         "Effect Toggle 1: MIDI Ch 1 | CC 20 | 0 (OFF)",
     ]
+
+
+def test_midi_delivery_monitor_logs_received_message():
+    port = FakePort()
+    logs = []
+    monitor = main.MidiDeliveryMonitor(port, logger=logs.append)
+    message = main.mido.Message("control_change", control=20, value=127)
+
+    monitor.expect(message)
+    monitor.receive(message)
+    monitor.close()
+
+    assert logs == [f"MIDI received by MODEP: {message}"]
+
+
+def test_midi_delivery_monitor_logs_timeout():
+    port = FakePort()
+    logs = []
+    monitor = main.MidiDeliveryMonitor(port, timeout=0, logger=logs.append)
+    message = main.mido.Message("control_change", control=20, value=127)
+
+    monitor.expect(message)
+    monitor.worker.join(timeout=1.0)
+    monitor.close()
+
+    assert logs == [f"MIDI NOT received by MODEP within 0.0s: {message}"]
 
 
 def test_publish_feedback_writes_timestamped_json(tmp_path):
