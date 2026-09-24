@@ -1,4 +1,8 @@
+import json
+import os
 import subprocess
+import tempfile
+import time
 from signal import pause
 
 import mido
@@ -8,6 +12,7 @@ from gpiozero import Button
 PORT_NAME = "GuitarPedalPort"
 TARGET_KEYWORDS = ("modep", "mod-host", "pisound")
 CC_CHANNEL = 0
+FEEDBACK_FILE = "/var/modep/button_feedback.json"
 
 
 switches_config = {
@@ -16,6 +21,23 @@ switches_config = {
     23: {"name": "Next Pedalboard", "type": "cmd", "val": "/usr/modep/scripts/next_pedalboard.sh"},
     5: {"name": "Prev Pedalboard", "type": "cmd", "val": "/usr/modep/scripts/prev_pedalboard.sh"},
 }
+
+
+def publish_feedback(message, feedback_file=FEEDBACK_FILE, timestamp=None):
+    """Publish the latest button message atomically for the display service."""
+    payload = {"message": message, "timestamp": time.time() if timestamp is None else timestamp}
+    directory = os.path.dirname(feedback_file) or "."
+    try:
+        os.makedirs(directory, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", dir=directory, delete=False) as temporary_file:
+            json.dump(payload, temporary_file)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+            temporary_path = temporary_file.name
+        os.replace(temporary_path, feedback_file)
+    except OSError as error:
+        print(f"Could not publish display feedback: {error}")
+
 
 def find_target_input(input_names, keywords=TARGET_KEYWORDS):
     """Return the first MIDI input matching a known MODEP identifier."""
@@ -69,6 +91,8 @@ def handle_cc_press(
                 print(f"Failed sending to auto-route target: {error}")
 
         status = "ON" if cc_states[control_number] else "OFF"
+        feedback = f"{name}: MIDI Ch {channel + 1} | CC {control_number} | {midi_value} ({status})"
+        publish_feedback(feedback)
         print(f"{name} (Pin {pin_number}) sent CC {control_number} -> {midi_value} ({status})")
     except Exception as error:
         print(f"Error inside CC handler: {error}")
@@ -77,6 +101,8 @@ def handle_cc_press(
 def handle_cmd_press(pin_number, script_path, name, popen=subprocess.Popen):
     """Run a pedalboard script without waiting for it to finish."""
     try:
+        direction = "Next" if "next" in name.lower() else "Prev"
+        publish_feedback(direction)
         print(f"{name} (Pin {pin_number}) running script: {script_path}")
         popen(["/bin/bash", script_path])
     except Exception as error:

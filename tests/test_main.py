@@ -1,3 +1,5 @@
+import json
+
 import main
 
 
@@ -25,10 +27,12 @@ def test_find_target_input_matches_case_insensitively():
     assert main.find_target_input(["MIDI Keyboard"]) is None
 
 
-def test_cc_press_toggles_and_sends_to_both_ports():
+def test_cc_press_toggles_and_sends_to_both_ports(monkeypatch):
     primary = FakePort()
     routed = FakePort()
     states = {20: False}
+    feedback = []
+    monkeypatch.setattr(main, "publish_feedback", feedback.append)
 
     main.handle_cc_press(6, 20, "Effect Toggle 1", primary, routed, states)
     main.handle_cc_press(6, 20, "Effect Toggle 1", primary, routed, states)
@@ -36,6 +40,18 @@ def test_cc_press_toggles_and_sends_to_both_ports():
     assert [message.value for message in primary.messages] == [127, 0]
     assert [message.control for message in routed.messages] == [20, 20]
     assert states[20] is False
+    assert feedback == [
+        "Effect Toggle 1: MIDI Ch 1 | CC 20 | 127 (ON)",
+        "Effect Toggle 1: MIDI Ch 1 | CC 20 | 0 (OFF)",
+    ]
+
+
+def test_publish_feedback_writes_timestamped_json(tmp_path):
+    feedback_file = tmp_path / "feedback.json"
+
+    main.publish_feedback("Next", str(feedback_file), timestamp=10.0)
+
+    assert json.loads(feedback_file.read_text()) == {"message": "Next", "timestamp": 10.0}
 
 
 def test_command_press_starts_bash_script():
