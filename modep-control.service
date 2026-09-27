@@ -11,6 +11,7 @@ WorkingDirectory=/home/patch/modep_ui
 ExecStart=/home/patch/.local/bin/uv run main.py
 Restart=always
 RestartSec=3
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
