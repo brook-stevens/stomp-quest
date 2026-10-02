@@ -21,8 +21,8 @@ MIDI_RECEIVE_TIMEOUT = 1.0
 
 switches_config = {
     6: {"name": "Effect Toggle 1", "type": "cc", "val": 20},
-    3: {"name": "Effect Toggle 2", "type": "cc", "val": 21},
-    23: {"name": "Next Pedalboard", "type": "cmd", "val": "/usr/modep/scripts/next_pedalboard.sh"},
+    23: {"name": "Effect Toggle 2", "type": "cc", "val": 21},
+    3: {"name": "Next Pedalboard", "type": "cmd", "val": "/usr/modep/scripts/next_pedalboard.sh"},
     5: {"name": "Prev Pedalboard", "type": "cmd", "val": "/usr/modep/scripts/prev_pedalboard.sh"},
 }
 
